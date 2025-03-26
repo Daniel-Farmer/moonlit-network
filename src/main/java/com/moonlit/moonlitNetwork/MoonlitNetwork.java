@@ -396,7 +396,7 @@ public final class MoonlitNetwork extends JavaPlugin {
         }
     }
 
-    // --- Styled Console Message Logic --
+    // --- Styled Console Message Logic ---
 
     private void sendStyledMessage(String statusMessage, ChatColor statusColor) {
         ConsoleCommandSender console = Bukkit.getConsoleSender();
