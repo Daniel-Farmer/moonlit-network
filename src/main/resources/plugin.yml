@@ -1,8 +1,38 @@
-# src/main/resources/plugin.yml
+# Main plugin definition file (src/main/resources/plugin.yml)
 
-name: moonlit-network   # <-- Changed back to a valid name (no spaces)
-version: '1.2'
+# This name is used internally by Bukkit/Spigot and for the default data folder.
+# It should match the base filename of your JAR (e.g., moonlit-network.jar)
+# and cannot contain spaces.
+name: moonlit-network
+
+# !!! VERSION PLACEHOLDER !!!
+# Maven will replace ${project.version} with the value from pom.xml during build.
+version: '${project.version}'
+
+# Main class extending JavaPlugin
 main: com.moonlit.moonlitNetwork.MoonlitNetwork
+
+# API version for server compatibility check (use major.minor)
 api-version: '1.21'
-# author: YourName
-# description: A cool plugin for the Moonlit Network.
+
+# Optional fields (add as needed)
+# description: The core plugin for the Moonlit Network server.
+# authors: [Daniel-Farmer]
+# website: https://github.com/Daniel-Farmer/moonlit-network
+
+# Define permissions here if needed later
+# permissions:
+#   moonlit.admin.notify:
+#     description: Receives update notifications from the Moonlit Core updater.
+#     default: op
+#   moonlit.admin.reload:
+#     description: Allows reloading the Moonlit Core configuration.
+#     default: op
+
+# Define commands here if needed later
+# commands:
+#   moonlit:
+#     description: Base command for Moonlit Network.
+#     aliases: [mn]
+#     permission: moonlit.basecommand # Example permission
+#     usage: "/<command> [subcommand]"
