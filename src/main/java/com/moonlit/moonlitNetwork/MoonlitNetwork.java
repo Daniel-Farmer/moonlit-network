@@ -1,6 +1,5 @@
 package com.moonlit.moonlitNetwork;
 
-// Bukkit/Spigot Imports
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.ConsoleCommandSender;
@@ -9,7 +8,6 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.plugin.PluginDescriptionFile;
 
-// Java IO and Networking Imports
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -17,7 +15,6 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.logging.Level;
 
-// JSON Parsing Import (Gson)
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -25,18 +22,15 @@ import com.google.gson.JsonSyntaxException;
 
 public final class MoonlitNetwork extends JavaPlugin {
 
-    // --- Constants ---
     private static final String DISPLAY_NAME = "Moonlit Network";
     private static final String CORE_FOLDER_NAME = "Moonlit Core";
     private static final String CONFIG_SUBFOLDER_NAME = "Config";
+    private static final String UPDATES_SUBFOLDER_NAME = "Updates";
     private static final String CONFIG_FILE_NAME = "config.yml";
     private static final Gson gson = new Gson();
 
-    // --- Custom Configuration Fields ---
     private FileConfiguration customConfig = null;
     private File customConfigFile = null;
-
-    // --- Plugin Lifecycle Methods ---
 
     @Override
     public void onEnable() {
@@ -59,8 +53,6 @@ public final class MoonlitNetwork extends JavaPlugin {
     public void onDisable() {
         sendStyledMessage("Plugin has been disabled!", ChatColor.RED);
     }
-
-    // --- Custom Configuration Handling ---
 
     public FileConfiguration getCustomConfig() {
         if (customConfig == null) {
@@ -86,8 +78,12 @@ public final class MoonlitNetwork extends JavaPlugin {
 
         InputStream defaultConfigStream = getResource(CONFIG_FILE_NAME);
         if (defaultConfigStream != null) {
-            YamlConfiguration defaultConfig = YamlConfiguration.loadConfiguration(new InputStreamReader(defaultConfigStream));
-            customConfig.setDefaults(defaultConfig);
+            try (InputStreamReader reader = new InputStreamReader(defaultConfigStream)) {
+                YamlConfiguration defaultConfig = YamlConfiguration.loadConfiguration(reader);
+                customConfig.setDefaults(defaultConfig);
+            } catch (IOException e) {
+                getLogger().log(Level.SEVERE, "Could not load default config from JAR", e);
+            }
         }
         getLogger().info("Configuration loaded from: " + customConfigFile.getPath());
     }
@@ -138,21 +134,18 @@ public final class MoonlitNetwork extends JavaPlugin {
 
         InputStream defaultConfigStream = getResource(CONFIG_FILE_NAME);
         if (defaultConfigStream != null) {
-            YamlConfiguration defaultConfig = YamlConfiguration.loadConfiguration(new InputStreamReader(defaultConfigStream));
-            customConfig.setDefaults(defaultConfig);
+            try (InputStreamReader reader = new InputStreamReader(defaultConfigStream)) {
+                YamlConfiguration defaultConfig = YamlConfiguration.loadConfiguration(reader);
+                customConfig.setDefaults(defaultConfig);
+            } catch (IOException e) {
+                getLogger().log(Level.SEVERE, "Could not load default config from JAR during reload", e);
+            }
         }
         getLogger().info("Configuration reloaded from: " + customConfigFile.getPath());
     }
 
-    // --- Folder Creation Logic ---
-
-    /**
-     * Creates the necessary directories directly under the main /plugins/ folder.
-     * WARNING: This deviates from standard Bukkit/Spigot practice.
-     */
     private void createPluginFolders() {
         File pluginsFolder = getDataFolder().getParentFile();
-
         if (pluginsFolder == null || !pluginsFolder.isDirectory()) {
             getLogger().severe("Could not locate the main plugins directory!");
             return;
@@ -161,34 +154,28 @@ public final class MoonlitNetwork extends JavaPlugin {
         File moonlitCoreBaseFolder = new File(pluginsFolder, CORE_FOLDER_NAME);
         File scriptsFolder = new File(moonlitCoreBaseFolder, "Scripts");
         File configFolder = new File(moonlitCoreBaseFolder, CONFIG_SUBFOLDER_NAME);
+        File updatesFolder = new File(moonlitCoreBaseFolder, UPDATES_SUBFOLDER_NAME);
 
         if (!moonlitCoreBaseFolder.exists()) {
-            if (moonlitCoreBaseFolder.mkdirs()) {
-                getLogger().info("Created directory: " + moonlitCoreBaseFolder.getPath());
-            } else {
-                getLogger().severe("Could not create directory: " + moonlitCoreBaseFolder.getPath() + ". Check permissions.");
-                return;
-            }
+            if (moonlitCoreBaseFolder.mkdirs()) { getLogger().info("Created directory: " + moonlitCoreBaseFolder.getPath()); }
+            else { getLogger().severe("Could not create directory: " + moonlitCoreBaseFolder.getPath() + ". Check permissions."); return; }
         }
 
         if (!scriptsFolder.exists()) {
-            if (scriptsFolder.mkdirs()) {
-                getLogger().info("Created directory: " + scriptsFolder.getPath());
-            } else {
-                getLogger().severe("Could not create directory: " + scriptsFolder.getPath());
-            }
+            if (scriptsFolder.mkdirs()) { getLogger().info("Created directory: " + scriptsFolder.getPath()); }
+            else { getLogger().severe("Could not create directory: " + scriptsFolder.getPath()); }
         }
 
         if (!configFolder.exists()) {
-            if (configFolder.mkdirs()) {
-                getLogger().info("Created directory: " + configFolder.getPath());
-            } else {
-                getLogger().severe("Could not create directory: " + configFolder.getPath());
-            }
+            if (configFolder.mkdirs()) { getLogger().info("Created directory: " + configFolder.getPath()); }
+            else { getLogger().severe("Could not create directory: " + configFolder.getPath()); }
+        }
+
+        if (!updatesFolder.exists()) {
+            if (updatesFolder.mkdirs()) { getLogger().info("Created directory: " + updatesFolder.getPath()); }
+            else { getLogger().severe("Could not create directory: " + updatesFolder.getPath()); }
         }
     }
-
-    // --- Auto-Updater Logic ---
 
     private void checkForUpdates() {
         String owner = getCustomConfig().getString("updater.github-owner");
@@ -217,59 +204,62 @@ public final class MoonlitNetwork extends JavaPlugin {
             int responseCode = connection.getResponseCode();
 
             if (responseCode == HttpURLConnection.HTTP_OK) {
-                InputStreamReader reader = new InputStreamReader(connection.getInputStream());
-                JsonObject releaseInfo = gson.fromJson(reader, JsonObject.class);
-                reader.close();
+                String latestVersion;
+                String downloadUrl = null;
+                String assetName = null;
 
-                String latestVersionTag = releaseInfo.get("tag_name").getAsString();
-                String latestVersion = latestVersionTag;
-                if (latestVersion.startsWith("v")) {
-                    latestVersion = latestVersion.substring(1);
-                }
+                try (InputStreamReader reader = new InputStreamReader(connection.getInputStream())) {
+                    JsonObject releaseInfo = gson.fromJson(reader, JsonObject.class);
 
-                getLogger().info("Current version: " + currentVersion + ", Latest version found on GitHub: " + latestVersion);
+                    String latestVersionTag = releaseInfo.get("tag_name").getAsString();
+                    latestVersion = latestVersionTag;
+                    if (latestVersion.startsWith("v")) {
+                        latestVersion = latestVersion.substring(1);
+                    }
 
-                if (isNewerVersion(latestVersion, currentVersion)) {
-                    getLogger().info("A new version is available: " + latestVersion);
-                    notifyAdmins(ChatColor.GREEN + "A new version of " + DISPLAY_NAME + " (" + latestVersion + ") is available!");
+                    getLogger().info("Current version: " + currentVersion + ", Latest version found on GitHub: " + latestVersion);
 
-                    if (getCustomConfig().getBoolean("updater.download-updates", true)) {
-                        String assetName = getCustomConfig().getString("updater.jar-asset-name");
-                        if (assetName == null || assetName.isEmpty()) {
-                            getLogger().warning("Cannot download update: 'updater.jar-asset-name' not set in config.yml.");
-                            notifyAdmins(ChatColor.RED + "Update found, but download failed: JAR asset name not configured.");
-                            connection.disconnect(); // Disconnect before returning
-                            return;
-                        }
+                    if (isNewerVersion(latestVersion, currentVersion)) {
+                        getLogger().info("A new version is available: " + latestVersion);
+                        notifyAdmins(ChatColor.GREEN + "A new version of " + DISPLAY_NAME + " (" + latestVersion + ") is available!");
 
-                        String downloadUrl = null;
-                        if (releaseInfo.has("assets") && releaseInfo.get("assets").isJsonArray()) {
-                            for (JsonElement assetElement : releaseInfo.getAsJsonArray("assets")) {
-                                JsonObject asset = assetElement.getAsJsonObject();
-                                if (asset.has("name") && asset.get("name").getAsString().equalsIgnoreCase(assetName)) {
-                                    if (asset.has("browser_download_url")) {
-                                        downloadUrl = asset.get("browser_download_url").getAsString();
-                                        break;
+                        if (getCustomConfig().getBoolean("updater.download-updates", true)) {
+                            assetName = getCustomConfig().getString("updater.jar-asset-name");
+                            if (assetName == null || assetName.isEmpty()) {
+                                getLogger().warning("Cannot download update: 'updater.jar-asset-name' not set in config.yml.");
+                                notifyAdmins(ChatColor.RED + "Update found, but download failed: JAR asset name not configured.");
+                                connection.disconnect();
+                                return;
+                            }
+
+                            if (releaseInfo.has("assets") && releaseInfo.get("assets").isJsonArray()) {
+                                for (JsonElement assetElement : releaseInfo.getAsJsonArray("assets")) {
+                                    JsonObject asset = assetElement.getAsJsonObject();
+                                    if (asset.has("name") && asset.get("name").getAsString().equalsIgnoreCase(assetName)) {
+                                        if (asset.has("browser_download_url")) {
+                                            downloadUrl = asset.get("browser_download_url").getAsString();
+                                            break;
+                                        }
                                     }
                                 }
                             }
-                        }
 
-                        if (downloadUrl != null) {
-                            getLogger().info("Update target JAR: " + assetName);
-                            getLogger().info("Attempting to download update from: " + downloadUrl);
-                            notifyAdmins(ChatColor.YELLOW + "Downloading " + DISPLAY_NAME + " version " + latestVersion + "...");
-                            downloadUpdate(downloadUrl, assetName);
+                            if (downloadUrl != null) {
+                                getLogger().info("Update target JAR on GitHub: " + assetName);
+                                getLogger().info("Attempting to download update from: " + downloadUrl);
+                                notifyAdmins(ChatColor.YELLOW + "Downloading " + DISPLAY_NAME + " version " + latestVersion + "...");
+                                downloadUpdateToCustomFolder(downloadUrl, assetName, latestVersion);
+                            } else {
+                                getLogger().warning("Could not find asset '" + assetName + "' attached to the latest release (" + latestVersionTag + ").");
+                                notifyAdmins(ChatColor.RED + "Update found, but could not find the download asset '" + assetName + "'. Check GitHub release attachments.");
+                            }
                         } else {
-                            getLogger().warning("Could not find asset '" + assetName + "' attached to the latest release (" + latestVersionTag + ").");
-                            notifyAdmins(ChatColor.RED + "Update found, but could not find the download asset '" + assetName + "'. Check GitHub release attachments.");
+                            getLogger().info("Automatic update download is disabled in config.yml.");
+                            notifyAdmins(ChatColor.YELLOW + "Please update " + DISPLAY_NAME + " manually.");
                         }
                     } else {
-                        getLogger().info("Automatic update download is disabled in config.yml.");
-                        notifyAdmins(ChatColor.YELLOW + "Please update " + DISPLAY_NAME + " manually.");
+                        getLogger().info("You are running the latest version (or GitHub version is not newer).");
                     }
-                } else {
-                    getLogger().info("You are running the latest version (or GitHub version is not newer).");
                 }
 
             } else {
@@ -292,43 +282,35 @@ public final class MoonlitNetwork extends JavaPlugin {
         if (remoteVersion == null || remoteVersion.isEmpty() || currentVersion == null || currentVersion.isEmpty()) {
             return false;
         }
-
         String[] remoteParts = remoteVersion.split("\\.");
         String[] currentParts = currentVersion.split("\\.");
-
         int length = Math.max(remoteParts.length, currentParts.length);
         for (int i = 0; i < length; i++) {
-            int remotePart = 0;
-            if (i < remoteParts.length) {
-                try { remotePart = Integer.parseInt(remoteParts[i].replaceAll("[^0-9]", "")); }
-                catch (NumberFormatException e) { }
-            }
-
-            int currentPart = 0;
-            if (i < currentParts.length) {
-                try { currentPart = Integer.parseInt(currentParts[i].replaceAll("[^0-9]", "")); }
-                catch (NumberFormatException e) { }
-            }
-
+            int remotePart = 0, currentPart = 0;
+            try { if (i < remoteParts.length) remotePart = Integer.parseInt(remoteParts[i].replaceAll("[^0-9]", "")); } catch (NumberFormatException e) { }
+            try { if (i < currentParts.length) currentPart = Integer.parseInt(currentParts[i].replaceAll("[^0-9]", "")); } catch (NumberFormatException e) { }
             if (remotePart > currentPart) return true;
             if (remotePart < currentPart) return false;
         }
         return false;
     }
 
-    private void downloadUpdate(String downloadUrl, String expectedAssetName) {
-        File updateFolder = new File(getDataFolder().getParentFile(), "update");
-        if (!updateFolder.exists()) {
-            if (!updateFolder.mkdirs()) {
-                getLogger().severe("Could not create update directory: " + updateFolder.getPath());
-                notifyAdmins(ChatColor.RED + "Update download failed: Could not create update directory.");
+    private void downloadUpdateToCustomFolder(String downloadUrl, String expectedAssetName, String latestVersion) {
+        File pluginsFolder = getDataFolder().getParentFile();
+        if (pluginsFolder == null) { getLogger().severe("Could not get plugins folder path."); return; }
+        File customUpdateFolder = new File(pluginsFolder, CORE_FOLDER_NAME + File.separator + UPDATES_SUBFOLDER_NAME);
+
+        if (!customUpdateFolder.exists()) {
+            if (!customUpdateFolder.mkdirs()) {
+                getLogger().severe("Could not create custom update directory: " + customUpdateFolder.getPath());
+                notifyAdmins(ChatColor.RED + "Update download failed: Could not create directory at " + customUpdateFolder.getPath());
                 return;
             }
         }
 
-        String targetFileName = getDescription().getName() + ".jar";
-        File destinationFile = new File(updateFolder, targetFileName);
-        File tempFile = new File(updateFolder, targetFileName + ".download");
+        String targetFileName = getDescription().getName() + "-" + latestVersion + ".jar";
+        File destinationFile = new File(customUpdateFolder, targetFileName);
+        File tempFile = new File(customUpdateFolder, targetFileName + ".download");
 
         HttpURLConnection connection = null;
         InputStream inputStream = null;
@@ -352,18 +334,18 @@ public final class MoonlitNetwork extends JavaPlugin {
 
                 inputStream = connection.getInputStream();
                 outputStream = new FileOutputStream(tempFile);
-
                 byte[] buffer = new byte[8192];
                 int bytesRead;
-                while ((bytesRead = inputStream.read(buffer)) != -1) {
-                    outputStream.write(buffer, 0, bytesRead);
-                }
+                while ((bytesRead = inputStream.read(buffer)) != -1) { outputStream.write(buffer, 0, bytesRead); }
 
-                getLogger().info("Download complete. Moving to update folder...");
+                getLogger().info("Download complete. Moving to final destination...");
                 Files.move(tempFile.toPath(), destinationFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
-                getLogger().info(ChatColor.GREEN + "Update downloaded successfully to " + destinationFile.getPath());
-                notifyAdmins(ChatColor.GREEN + DISPLAY_NAME + " update downloaded! Please restart the server to apply the changes.");
+                String successMsg = DISPLAY_NAME + " version " + latestVersion + " downloaded successfully to '"
+                        + CORE_FOLDER_NAME + File.separator + UPDATES_SUBFOLDER_NAME + File.separator + targetFileName + "'.";
+                getLogger().info(ChatColor.GREEN + successMsg);
+                notifyAdmins(ChatColor.GREEN + successMsg);
+                notifyAdmins(ChatColor.YELLOW + "MANUAL ACTION REQUIRED: Stop the server, replace the main plugin JAR in '/plugins/', then restart.");
 
             } else {
                 getLogger().warning("Failed to download update. Download server responded with code: " + responseCode);
@@ -395,8 +377,6 @@ public final class MoonlitNetwork extends JavaPlugin {
             });
         }
     }
-
-    // --- Styled Console Message Logic --
 
     private void sendStyledMessage(String statusMessage, ChatColor statusColor) {
         ConsoleCommandSender console = Bukkit.getConsoleSender();
@@ -447,4 +427,4 @@ public final class MoonlitNetwork extends JavaPlugin {
         return baseInput + " ".repeat(neededPadding) + " " + endChar + ChatColor.RESET;
     }
 
-} // End of MoonlitNetwork class
+}

@@ -7,7 +7,7 @@
     <!-- These should match your project setup -->
     <groupId>com.moonlit</groupId>
     <artifactId>moonlit-network</artifactId>
-    <version>1.0</version> <!-- This version is used by the updater for comparison -->
+    <version>1.2</version> <!-- This version is used by the updater for comparison -->
     <packaging>jar</packaging>
 
     <name>moonlit-network</name> <!-- This name is used by the updater logic (getDescription().getName()) -->
