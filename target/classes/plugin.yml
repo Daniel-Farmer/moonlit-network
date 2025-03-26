@@ -1,0 +1,8 @@
+# src/main/resources/plugin.yml
+
+name: moonlit-network   # <-- Changed back to a valid name (no spaces)
+version: '1.0'
+main: com.moonlit.moonlitNetwork.MoonlitNetwork
+api-version: '1.21'
+# author: YourName
+# description: A cool plugin for the Moonlit Network.
