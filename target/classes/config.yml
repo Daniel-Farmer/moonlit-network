@@ -1,0 +1,48 @@
+# ======================================================================== #
+# Configuration for Moonlit Network Core                                   #
+# ======================================================================== #
+
+# Settings related to the automatic update checker and downloader.
+updater:
+  # Set to true to automatically check for updates when the server starts.
+  # Set to false to disable automatic checking (e.g., if you plan to use an update command later).
+  check-on-startup: true
+
+  # Set to true to automatically download new versions if found.
+  # The update will be placed in the '/plugins/update/' folder and will
+  # require a full server RESTART to be applied.
+  # Set to false to only notify about updates without downloading.
+  download-updates: true
+
+  # --- GitHub Repository Details (REQUIRED if check-on-startup is true) ---
+
+  # Your GitHub username or the name of the organization that owns the repository.
+  # Example: "octocat"
+  # !! MUST BE REPLACED !!
+  github-owner: "YourGitHubUsername"
+
+  # The name of the repository on GitHub where the plugin code and releases are hosted.
+  # Example: "MyAwesomePlugin"
+  # !! MUST BE REPLACED !!
+  github-repo: "YourPluginRepositoryName"
+
+  # The EXACT filename of the JAR file asset that you attach to your releases on GitHub.
+  # This is case-sensitive and must match the uploaded file precisely.
+  # Example: "MyAwesomePlugin-1.2.jar", "moonlit-network.jar"
+  # !! MUST BE REPLACED !!
+  jar-asset-name: "YourJarFilename.jar"
+
+  # --- Notifications ---
+
+  # Set to true to notify online players who have the 'moonlit.admin.notify' permission
+  # when an update is found or downloaded. Messages are always sent to the console regardless.
+  notify-admins: true
+
+# ======================================================================== #
+# Add other plugin configuration sections below if needed in the future.   #
+# Example:                                                                 #
+# features:                                                               #
+#   some-feature-enabled: true                                            #
+# messages:                                                                #
+#   welcome-message: "&aWelcome to the server!"                           #
+# ======================================================================== #

@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- These should match your project setup -->
+    <groupId>com.moonlit</groupId>
+    <artifactId>moonlit-network</artifactId>
+    <version>1.0</version> <!-- This version is used by the updater for comparison -->
+    <packaging>jar</packaging>
+
+    <name>moonlit-network</name> <!-- This name is used by the updater logic (getDescription().getName()) -->
+
+    <properties>
+        <!-- Set your target Java version (matching your JDK) -->
+        <java.version>21</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <build>
+        <!-- Sets the default goal when running just 'mvn' -->
+        <defaultGoal>clean package</defaultGoal>
+
+        <plugins>
+            <!-- Maven Compiler Plugin: Compiles your Java code -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version> <!-- Use a recent version -->
+                <configuration>
+                    <!-- Source and target Java versions -->
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                </configuration>
+            </plugin>
+
+            <!-- Maven Shade Plugin: Bundles dependencies (like Gson) into your final JAR -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.5.3</version> <!-- Use a recent version -->
+                <executions>
+                    <execution>
+                        <phase>package</phase> <!-- Run during the 'package' phase -->
+                        <goals>
+                            <goal>shade</goal> <!-- The goal is to 'shade' (bundle) -->
+                        </goals>
+                        <configuration>
+                            <!-- Optional: Relocation prevents conflicts if other plugins also shade Gson.
+                                 If you encounter ClassNotFoundException or similar issues related to Gson
+                                 coming from another plugin, uncomment and use this. -->
+                            <!--
+                            <relocations>
+                                <relocation>
+                                    <pattern>com.google.gson</pattern>
+                                    <shadedPattern>com.moonlit.moonlitNetwork.lib.gson</shadedPattern>
+                                </relocation>
+                            </relocations>
+                            -->
+                            <!-- Minimizing the JAR can sometimes cause issues if not configured carefully -->
+                            <minimizeJar>false</minimizeJar>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+
+        <!-- Resource Filtering: Allows using Maven properties (like ${project.version})
+             in resource files (e.g., plugin.yml), although not currently used in plugin.yml -->
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+    </build>
+
+    <repositories>
+        <!-- Repository for Spigot API snapshots -->
+        <repository>
+            <id>spigotmc-repo</id>
+            <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+        </repository>
+        <!-- Repository for general libraries like Gson (often available on Maven Central) -->
+        <repository>
+            <id>sonatype</id>
+            <url>https://oss.sonatype.org/content/groups/public/</url>
+        </repository>
+        <!-- Maven Central is usually included by default, but explicit doesn't hurt -->
+        <repository>
+            <id>maven-central</id>
+            <url>https://repo.maven.apache.org/maven2/</url>
+        </repository>
+    </repositories>
+
+    <dependencies>
+        <!-- Spigot API Dependency: Provided by the server at runtime -->
+        <dependency>
+            <groupId>org.spigotmc</groupId>
+            <artifactId>spigot-api</artifactId>
+            <!-- Use the Minecraft version you are targeting -->
+            <version>1.21.4-R0.1-SNAPSHOT</version>
+            <scope>provided</scope> <!-- Crucial: Do not bundle the API -->
+        </dependency>
+
+        <!-- Gson Dependency: For parsing JSON from the GitHub API -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.10.1</version> <!-- Use the latest stable version -->
+            <scope>compile</scope> <!-- Crucial: Bundle this library into the plugin JAR -->
+        </dependency>
+    </dependencies>
+</project>
